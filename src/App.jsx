@@ -22,15 +22,21 @@ const App = () => {
     };
 
     return (
-        <div id="app" className=" relative flex items-center justify-center bg-gray-900">
-            <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
-            <div className=" absolute top-4/6">
+        <div
+            id="app"
+            className=" flex items-center justify-center bg-gray-900 w-screen h-screen overflow-hidden"
+        >
+            <span className="relative flex items-center justify-center">
+                <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
                 {disableButton && (
-                    <button className=" py-2 px-4 bg-cyan-500 border rounded" onClick={changeScene}>
+                    <button
+                        className=" top-4/6 absolute py-2 px-4 bg-cyan-500 border rounded"
+                        onClick={changeScene}
+                    >
                         {gameStarted ? "Restart Game" : "Start Game"}
                     </button>
                 )}
-            </div>
+            </span>
         </div>
     );
 };
