@@ -22,11 +22,11 @@ const App = () => {
     };
 
     return (
-        <div id="app">
+        <div id="app" className=" relative flex items-center justify-center bg-gray-900">
             <PhaserGame ref={phaserRef} currentActiveScene={currentScene} />
-            <div>
+            <div className=" absolute top-4/6">
                 {disableButton && (
-                    <button className="button" onClick={changeScene}>
+                    <button className=" py-2 px-4 bg-cyan-500 border rounded" onClick={changeScene}>
                         {gameStarted ? "Restart Game" : "Start Game"}
                     </button>
                 )}

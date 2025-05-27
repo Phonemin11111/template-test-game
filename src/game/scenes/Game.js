@@ -14,7 +14,7 @@ export class Game extends Scene {
 
         // platforms
         this.platforms = this.physics.add.staticGroup();
-        this.platforms.create(512, 709, "ground").setScale(2.6).refreshBody();
+        this.platforms.create(512, 709, "ground").setScale(2.6, 4).refreshBody();
         this.platforms
             .create(764, 460, "ground")
             .setScale(1.3, 1.25)
@@ -33,7 +33,7 @@ export class Game extends Scene {
         this.stars = this.physics.add.group({
             key: "star",
             repeat: 11,
-            setXY: { x: 12, y: 0, stepX: 70 },
+            setXY: { x: 50, y: 0, stepX: 84 },
         });
         this.stars.children.iterate((child) =>
             child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8))
