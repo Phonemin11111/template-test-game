@@ -217,10 +217,10 @@ export class Game extends Scene {
 
         // Movement: prefer joystick over keyboard
         if (this.joystickVector.x !== 0) {
-            // horizontal movement
-            p.setVelocityX(-this.moveSpeed);
-            p.anims.play("left", true);
             if (this.joystickVector.x < 0) {
+                // horizontal movement
+                p.setVelocityX(-this.moveSpeed);
+                p.anims.play("left", true);
             } else {
                 p.setVelocityX(this.moveSpeed);
                 p.anims.play("right", true);
