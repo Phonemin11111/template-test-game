@@ -37,12 +37,12 @@ export default defineConfig({
                 theme_color: "#1a202c",
                 icons: [
                     {
-                        src: "../public/favicon.png",
+                        src: "favicon.png",
                         sizes: "192x192",
                         type: "image/png",
                     },
                     {
-                        src: "../public/assets/logo.png",
+                        src: "assets/logo.png",
                         sizes: "512x512",
                         type: "image/png",
                     },
