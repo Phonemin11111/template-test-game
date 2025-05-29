@@ -28,12 +28,6 @@ export default defineConfig({
         phasermsg(),
         VitePWA({
             registerType: "autoUpdate",
-            includeAssets: [
-                "favicon.svg",
-                "robots.txt",
-                "icons/icon-192.png",
-                "icons/icon-512.png",
-            ],
             manifest: {
                 short_name: "MyGame",
                 name: "My Phaser React Game",
@@ -43,12 +37,12 @@ export default defineConfig({
                 theme_color: "#1a202c",
                 icons: [
                     {
-                        src: "icons/icon-192.png",
+                        src: "public/favicon.png",
                         sizes: "192x192",
                         type: "image/png",
                     },
                     {
-                        src: "icons/icon-512.png",
+                        src: "public/assets/logo.png",
                         sizes: "512x512",
                         type: "image/png",
                     },
