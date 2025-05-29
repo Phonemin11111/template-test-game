@@ -210,15 +210,18 @@ export class Game extends Scene {
 
     update() {
         if (this.gameOver) {
-            this.scene.start("GameOver");
+            // Delay a little before switching scene for better UX
+            this.time.delayedCall(500, () => {
+                this.scene.start("GameOver");
+            });
             return;
         }
         const p = this.elements.player;
 
         // Movement: prefer joystick over keyboard
         if (this.joystickVector.x !== 0) {
+            // horizontal movement
             if (this.joystickVector.x < 0) {
-                // horizontal movement
                 p.setVelocityX(-this.moveSpeed);
                 p.anims.play("left", true);
             } else {
