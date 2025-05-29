@@ -73,6 +73,25 @@ const App = () => {
         // Optionally handle jump release
     };
 
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (event) => {
+            event.preventDefault();
+            setDeferredPrompt(event);
+        };
+
+        window.addEventListener(
+            "beforeinstallprompt",
+            handleBeforeInstallPrompt
+        );
+
+        return () => {
+            window.removeEventListener(
+                "beforeinstallprompt",
+                handleBeforeInstallPrompt
+            );
+        };
+    }, []);
+
     return (
         <div className="flex items-center justify-center bg-gray-900 w-screen h-screen overflow-hidden">
             <div

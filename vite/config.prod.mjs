@@ -29,8 +29,8 @@ export default defineConfig({
         VitePWA({
             registerType: "autoUpdate",
             manifest: {
-                short_name: "MyGame",
-                name: "My Phaser React Game",
+                short_name: "PRG Test",
+                name: "Phaser+React+Tailwind Game",
                 start_url: "/",
                 display: "standalone",
                 background_color: "#000000",
