@@ -37,7 +37,7 @@ export default defineConfig({
                 theme_color: "#1a202c",
                 icons: [
                     {
-                        src: "favicon.png",
+                        src: "assets/star.png",
                         sizes: "192x192",
                         type: "image/png",
                     },
