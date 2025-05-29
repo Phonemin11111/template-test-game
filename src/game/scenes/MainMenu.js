@@ -24,11 +24,10 @@ export class MainMenu extends Scene {
             .image(width * 0.5, height * 0.3, "logo")
             .setDepth(100);
 
-        // Set initial logo scale based on height
-        const logoScale = height / 768; // 768 is original reference size
+        const logoScale = height / 768;
         this.logo.setScale(logoScale);
 
-        const fontSize = Math.round(height * 0.06); // 6% of screen height
+        const fontSize = Math.round(height * 0.06);
 
         this.titleText = this.add
             .text(width * 0.5, height * 0.55, "Main Menu", {
@@ -44,11 +43,16 @@ export class MainMenu extends Scene {
 
         EventBus.emit("current-scene-ready", this);
 
-        // Handle resizing
         this.scale.on("resize", this.onResize, this);
-
-        // 👇 Force an initial call in case resize event hasn’t fired yet
         this.onResize(this.scale);
+
+        // 👇 Add this to start the game on click
+        this.input.once("pointerdown", () => {
+            if (this.scene.isActive("GameOver")) {
+                this.scene.stop("GameOver");
+            }
+            this.changeScene();
+        });
     }
 
     onResize(gameSize) {

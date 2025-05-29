@@ -4,7 +4,8 @@ import { Scene, Math as PMath } from "phaser";
 export class Game extends Scene {
     constructor() {
         super("Game");
-        this.elements = {};
+        this.gameOver = false;
+        this.score = 0;
         // joystick state
         this.joystickVector = { x: 0, y: 0 };
         this.isJumping = false;
@@ -13,6 +14,15 @@ export class Game extends Scene {
     create() {
         this.gameOver = false;
         this.score = 0;
+        // ✅ Reset all dynamic elements to prevent "undefined" bugs after restart
+        this.elements = {
+            bg: null,
+            platforms: null,
+            player: null,
+            stars: null,
+            bombs: null,
+            scoreText: null,
+        };
 
         // 1) Base reference & your “feel” scale
         const baseW = 320;
