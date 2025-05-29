@@ -5,25 +5,38 @@ import { MainMenu } from "./scenes/MainMenu";
 import Phaser from "phaser";
 import { Preloader } from "./scenes/Preloader";
 
-// Find out more information about the Game Config at:
-// https://docs.phaser.io/api-documentation/typedef/types-core#gameconfig
-const config = {
-    type: Phaser.AUTO,
-    width: 1024,
-    height: 768,
-    physics: {
-        default: "arcade",
-        arcade: {
-            gravity: { y: 300 },
-            debug: false,
+const config = (parentId) => {
+    return {
+        type: Phaser.AUTO,
+        scale: {
+            parent: parentId,
+            mode: Phaser.Scale.RESIZE, // Dynamically resize to container
+            autoCenter: Phaser.Scale.CENTER_BOTH,
         },
-    },
-    parent: "game-container",
-    scene: [Boot, Preloader, MainMenu, Game, GameOver],
+
+        physics: {
+            default: "arcade",
+            arcade: {
+                gravity: { y: 300 },
+                debug: false,
+            },
+        },
+
+        scene: [Boot, Preloader, MainMenu, Game, GameOver],
+    };
 };
 
-const StartGame = (parent) => {
-    return new Phaser.Game({ ...config, parent });
+const StartGame = (parentId = "game-container") => {
+    if (!window.game) {
+        window.game = new Phaser.Game(config(parentId));
+        // Listen for parent resizes (optional, but ensures Phaser fires resize)
+        window.addEventListener("resize", () => {
+            const game = window.game;
+            const c = document.getElementById(parentId);
+            game.scale.resize(c.clientWidth, c.clientHeight);
+        });
+    }
+    return window.game;
 };
 
 export default StartGame;

@@ -1,57 +1,243 @@
 import { EventBus } from "../EventBus";
-import { Scene } from "phaser";
+import { Scene, Math as PMath } from "phaser";
 
 export class Game extends Scene {
     constructor() {
         super("Game");
+        this.elements = {};
+        // joystick state
+        this.joystickVector = { x: 0, y: 0 };
+        this.isJumping = false;
     }
 
     create() {
         this.gameOver = false;
         this.score = 0;
-        // background
-        this.add.image(512, 384, "background").setScale(1.3).setDepth(0);
 
-        // platforms
-        this.platforms = this.physics.add.staticGroup();
-        this.platforms.create(512, 709, "ground").setScale(2.6, 4).refreshBody();
-        this.platforms
-            .create(764, 460, "ground")
-            .setScale(1.3, 1.25)
-            .refreshBody();
-        this.platforms.create(50, 300, "ground").setScale(1.25).refreshBody();
-        this.platforms.create(960, 230, "ground").setScale(1.25).refreshBody();
+        // 1) Base reference & your “feel” scale
+        const baseW = 320;
+        const baseH = 180;
+        const baseScale = 0.67; // physics that felt right at 320×180
 
-        // player
-        this.player = this.physics.add.sprite(100, 450, "dude");
-        this.player
-            .setBounce(0.2)
-            .setCollideWorldBounds(true)
-            .body.setGravityY(300);
+        // 2) Actual canvas size
+        const W = this.scale.width;
+        const H = this.scale.height;
 
-        // stars
-        this.stars = this.physics.add.group({
-            key: "star",
-            repeat: 11,
-            setXY: { x: 50, y: 0, stepX: 84 },
-        });
-        this.stars.children.iterate((child) =>
-            child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8))
+        // 3) Percent difference
+        const pctW = (W - baseW) / baseW; // e.g. 2.2 at 1024px wide
+        const pctH = (H - baseH) / baseH;
+        const pctAvg = (pctW + pctH) * 0.5;
+
+        // 4) Map screen percent → physics percent via factor
+        const factor = 1 / 2.2; // from your 0.5→1.3 tuning
+        const physPct = pctAvg * factor;
+        const physScale = baseScale * (1 + physPct);
+
+        console.log(
+            `pctAvg=${pctAvg.toFixed(2)}, physPct=${physPct.toFixed(
+                2
+            )}, physScale=${physScale.toFixed(2)}`
         );
 
-        // bombs
-        this.bombs = this.physics.add.group();
+        // 5) Apply physics constants
+        this.moveSpeed = 120 * physScale;
+        this.jumpVel = -350 * physScale;
+        this.gravityY = 150 * physScale;
 
-        // score text
-        this.scoreText = this.add.text(16, 16, "Score: 0", {
-            fontSize: "32px",
-            fill: "#000",
+        // 6) Lock world & camera
+        this.physics.world.setBounds(0, 0, W, H);
+        this.cameras.main.setBounds(0, 0, W, H);
+
+        // 7) Initial layout
+        this._layout(W, H);
+
+        // 8) On resize, redo the same mapping
+        this.scale.on("resize", ({ width, height }) => {
+            const pw = (width - baseW) / baseW;
+            const ph = (height - baseH) / baseH;
+            const pavg = (pw + ph) * 0.5;
+            const ps = baseScale * (1 + pavg * factor);
+
+            this.moveSpeed = 120 * ps;
+            this.jumpVel = -350 * ps;
+            this.gravityY = 150 * ps;
+
+            this.physics.world.setBounds(0, 0, width, height);
+            this.cameras.main.setBounds(0, 0, width, height);
+            this._layout(width, height);
         });
 
-        // input
+        // 9) Input, animations, collisions
         this.cursors = this.input.keyboard.createCursorKeys();
+        this._createAnimations();
+        this._setupColliders();
 
-        // animations
+        // 10) Joystick events from React
+        this.events.on("joystick-move", ({ x, y }) => {
+            // normalize x/y from -100..100 to -1..1
+            this.joystickVector.x = Phaser.Math.Clamp(x / 100, -1, 1);
+            this.joystickVector.y = Phaser.Math.Clamp(y / 100, -1, 1);
+        });
+        this.events.on("joystick-stop", () => {
+            this.joystickVector.x = 0;
+            this.joystickVector.y = 0;
+        });
+        this.events.on("joystick-jump", () => {
+            this.isJumping = true;
+        });
+
+        EventBus.emit("current-scene-ready", this);
+    }
+
+    _layout(W, H) {
+        const designW = 1024,
+            designH = 768;
+        const scale = Math.min(W / designW, H / designH);
+
+        // Background
+        if (!this.elements.bg) {
+            this.elements.bg = this.add.image(0, 0, "background").setOrigin(0);
+        }
+        this.elements.bg.setDisplaySize(W, H);
+
+        // Platforms
+        const plats = [
+            { x: 512, y: 709, sx: 2.6, sy: 4 },
+            { x: 764, y: 460, sx: 1.3, sy: 1.25 },
+            { x: 50, y: 300, sx: 1.25, sy: 1 },
+            { x: 960, y: 230, sx: 1.25, sy: 1 },
+        ];
+        if (!this.elements.platforms) {
+            this.elements.platforms = this.physics.add.staticGroup();
+        }
+        plats.forEach((d, i) => {
+            let p = this.elements.platforms.getChildren()[i];
+            if (!p) p = this.elements.platforms.create(0, 0, "ground");
+            p.setPosition((d.x / designW) * W, (d.y / designH) * H)
+                .setScale((d.sx * W) / designW, (d.sy * H) / designH)
+                .refreshBody();
+        });
+
+        // Player
+        if (!this.elements.player) {
+            this.elements.player = this.physics.add
+                .sprite(0, 0, "dude")
+                .setBounce(0.2)
+                .setCollideWorldBounds(true);
+        }
+        this.elements.player.body.setGravityY(this.gravityY);
+        this.elements.player
+            .setPosition((100 / designW) * W, (450 / designH) * H)
+            .setScale(scale);
+
+        // Stars
+        if (!this.elements.stars) {
+            this.elements.stars = this.physics.add.group({
+                key: "star",
+                repeat: 11,
+                setXY: {
+                    x: (50 / designW) * W,
+                    y: 0,
+                    stepX: (84 / designW) * W,
+                },
+            });
+            this.elements.stars.children.iterate((c) =>
+                c.setBounceY(PMath.FloatBetween(0.4, 0.8))
+            );
+        }
+        this.elements.stars.children.iterate((c) => c.setScale(scale));
+
+        // Bombs
+        if (!this.elements.bombs) {
+            this.elements.bombs = this.physics.add.group();
+        }
+        this.elements.bombs.children.iterate((c) => c.setScale(scale));
+
+        // Score text
+        if (!this.elements.scoreText) {
+            this.elements.scoreText = this.add.text(0, 0, "", { fill: "#000" });
+        }
+        this.elements.scoreText
+            .setText(`Score: ${this.score}`)
+            .setStyle({ fontSize: `${Math.round(H * 0.05)}px` })
+            .setPosition((16 / designW) * W, (16 / designH) * H);
+    }
+
+    collectStar(player, star) {
+        star.disableBody(true, true);
+        this.score += 10;
+        this.elements.scoreText.setText(`Score: ${this.score}`);
+
+        if (this.elements.stars.countActive(true) === 0) {
+            this.elements.stars.children.iterate((c) =>
+                c.enableBody(true, c.x, 0, true, true)
+            );
+            const halfW = this.scale.width / 2;
+            const x =
+                player.x < halfW
+                    ? PMath.Between(halfW, this.scale.width)
+                    : PMath.Between(0, halfW);
+            const bomb = this.elements.bombs.create(
+                x,
+                (16 / 768) * this.scale.height,
+                "bomb"
+            );
+            bomb.setBounce(1)
+                .setCollideWorldBounds(true)
+                .setVelocity(PMath.Between(-200, 200), 20)
+                .setScale(
+                    Math.min(this.scale.width / 1024, this.scale.height / 768)
+                );
+        }
+    }
+
+    hitBomb(player, bomb) {
+        this.physics.pause();
+        player.setTint(0xff0000);
+        player.anims.play("turn");
+        this.gameOver = true;
+    }
+
+    update() {
+        if (this.gameOver) {
+            this.scene.start("GameOver");
+            return;
+        }
+        const p = this.elements.player;
+
+        // Movement: prefer joystick over keyboard
+        if (this.joystickVector.x !== 0) {
+            // horizontal movement
+            p.setVelocityX(-this.moveSpeed);
+            p.anims.play("left", true);
+            if (this.joystickVector.x < 0) {
+            } else {
+                p.setVelocityX(this.moveSpeed);
+                p.anims.play("right", true);
+            }
+        } else if (this.cursors.left.isDown) {
+            p.setVelocityX(-this.moveSpeed);
+            p.anims.play("left", true);
+        } else if (this.cursors.right.isDown) {
+            p.setVelocityX(this.moveSpeed);
+            p.anims.play("right", true);
+        } else {
+            p.setVelocityX(0);
+            p.anims.play("turn");
+        }
+
+        // Jump: handle joystick jump or keyboard up
+        const canJump = p.body.blocked.down;
+        if (this.isJumping && canJump) {
+            p.setVelocityY(this.jumpVel);
+        } else if (this.cursors.up.isDown && canJump) {
+            p.setVelocityY(this.jumpVel);
+        }
+        // reset jump flag each frame
+        this.isJumping = false;
+    }
+
+    _createAnimations() {
         if (!this.anims.exists("left")) {
             this.anims.create({
                 key: "left",
@@ -63,7 +249,6 @@ export class Game extends Scene {
                 repeat: -1,
             });
         }
-
         if (!this.anims.exists("turn")) {
             this.anims.create({
                 key: "turn",
@@ -71,7 +256,6 @@ export class Game extends Scene {
                 frameRate: 20,
             });
         }
-
         if (!this.anims.exists("right")) {
             this.anims.create({
                 key: "right",
@@ -83,78 +267,28 @@ export class Game extends Scene {
                 repeat: -1,
             });
         }
+    }
 
-        // collisions & overlaps
-        this.physics.add.collider(this.player, this.platforms);
-        this.physics.add.collider(this.stars, this.platforms);
-        this.physics.add.collider(this.bombs, this.platforms);
+    _setupColliders() {
         this.physics.add.collider(
-            this.player,
-            this.bombs,
+            this.elements.player,
+            this.elements.platforms
+        );
+        this.physics.add.collider(this.elements.stars, this.elements.platforms);
+        this.physics.add.collider(this.elements.bombs, this.elements.platforms);
+        this.physics.add.collider(
+            this.elements.player,
+            this.elements.bombs,
             this.hitBomb,
             null,
             this
         );
         this.physics.add.overlap(
-            this.player,
-            this.stars,
+            this.elements.player,
+            this.elements.stars,
             this.collectStar,
             null,
             this
         );
-
-        EventBus.emit("current-scene-ready", this);
-    }
-
-    collectStar = (player, star) => {
-        star.disableBody(true, true);
-        this.score += 10;
-        this.scoreText.setText(`Score: ${this.score}`);
-
-        if (this.stars.countActive(true) === 0) {
-            // respawn stars
-            this.stars.children.iterate((child) => {
-                child.enableBody(true, child.x, 0, true, true);
-            });
-
-            // drop a bomb
-            const x =
-                player.x < 400
-                    ? Phaser.Math.Between(400, 800)
-                    : Phaser.Math.Between(0, 400);
-
-            const bomb = this.bombs.create(x, 16, "bomb");
-            bomb.setBounce(1)
-                .setCollideWorldBounds(true)
-                .setVelocity(Phaser.Math.Between(-200, 200), 20);
-        }
-    };
-
-    hitBomb = (player, bomb) => {
-        this.physics.pause();
-        player.setTint(0xff0000);
-        player.anims.play("turn");
-        this.gameOver = true;
-    };
-
-    update() {
-        if (this.gameOver) {
-            // once gameOver, switch scene exactly once
-            this.scene.start("GameOver");
-            return;
-        }
-
-        // movement
-        if (this.cursors.left.isDown) {
-            this.player.setVelocityX(-160).anims.play("left", true);
-        } else if (this.cursors.right.isDown) {
-            this.player.setVelocityX(160).anims.play("right", true);
-        } else {
-            this.player.setVelocityX(0).anims.play("turn");
-        }
-
-        if (this.cursors.up.isDown && this.player.body.touching.down) {
-            this.player.setVelocityY(-600);
-        }
     }
 }
